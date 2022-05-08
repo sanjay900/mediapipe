@@ -150,3 +150,7 @@ CVPixelBufferRef GetCVPixelBufferRef(const GpuBuffer& buffer) {
 #endif  // !MEDIAPIPE_DISABLE_GPU
 
 }  // namespace mediapipe
+
+#include "mediapipe/framework/type_map.h"
+MEDIAPIPE_REGISTER_TYPE(mediapipe::GpuBuffer, "::mediapipe::GpuBuffer", nullptr,
+                        nullptr);

@@ -24,6 +24,7 @@ pybind_library(
     hdrs = ["calculator_graph.h"],
     deps = [
         ":util",
+        "//mediapipe/gpu:gl_calculator_helper",
         "//mediapipe/framework:calculator_cc_proto",
         "//mediapipe/framework:calculator_graph",
         "//mediapipe/framework:packet",

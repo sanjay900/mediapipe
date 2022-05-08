@@ -1204,6 +1204,9 @@ absl::StatusOr<std::string> ValidatedGraphConfig::RegisteredStreamTypeName(
       }
     }
   }
+  // if (name == "image" || name == "segmentation_mask") {
+  //   return "::mediapipe::GpuBuffer";
+  // }
   return mediapipe::UnknownErrorBuilder(MEDIAPIPE_LOC)
          << "Unable to find the type for stream \"" << name
          << "\".  It may be set to AnyType or something else that isn't "

@@ -28,6 +28,13 @@
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
 
+#if !MEDIAPIPE_DISABLE_GPU
+#include "mediapipe/gpu/gpu_shared_data_internal.h"
+#include "mediapipe/gpu/gl_calculator_helper.h"
+#include "mediapipe/gpu/gpu_buffer.h"
+#include "mediapipe/gpu/gpu_shared_data_internal.h"
+#endif  // !MEDIAPIPE_DISABLE_GPU
+
 namespace mediapipe {
 namespace python {
 
@@ -113,6 +120,17 @@ void CalculatorGraphSubmodule(pybind11::module* module) {
         }
         auto calculator_graph = absl::make_unique<CalculatorGraph>();
         RaisePyErrorIfNotOk(calculator_graph->Initialize(graph_config_proto));
+        LOG(INFO) << "Initialize the GPU.";
+        auto maybe_gpu_res = std::move(mediapipe::GpuResources::Create());
+        if (maybe_gpu_res.ok())
+        {
+            LOG(INFO) << "Succeeded get GPU";
+            calculator_graph->SetGpuResources(std::move(*maybe_gpu_res));
+        }
+        else
+        {
+            LOG(ERROR) << maybe_gpu_res.status();
+        }
         return calculator_graph.release();
       }),
       R"doc(Initialize CalculatorGraph object.
@@ -206,6 +224,44 @@ void CalculatorGraphSubmodule(pybind11::module* module) {
 )doc",
       py::arg("stream"), py::arg("packet"),
       py::arg("timestamp") = Timestamp::Unset());
+
+  calculator_graph.def(
+        "add_input_frame_as_a_gpu_buffer_to_input_stream",
+        [](CalculatorGraph* self, const std::string& stream, const ImageFrame& input_frame,
+          const Timestamp& timestamp) {
+          if (!timestamp.IsAllowedInStream()) {
+            throw RaisePyError(
+                PyExc_ValueError,
+                absl::StrCat(timestamp.DebugString(),
+                            " can't be the timestamp of a Packet in a stream.")
+                    .c_str());
+          }
+          mediapipe::GlCalculatorHelper gpu_helper;
+          gpu_helper.InitializeForTest(self->GetGpuResources().get());
+
+          gpu_helper.RunInGlContext([&input_frame, &stream, &timestamp, &self,
+                                            &gpu_helper]() -> absl::Status {
+                    // Convert ImageFrame to GpuBuffer.
+                    auto texture = gpu_helper.CreateSourceTexture(input_frame);
+                    auto gpu_frame = texture.GetFrame<mediapipe::GpuBuffer>();
+                    glFlush();
+                    texture.Release();
+                    // Send GPU image packet into the graph.
+                    py::gil_scoped_release gil_release;
+                    self->AddPacketToInputStream(
+                        stream, mediapipe::Adopt(gpu_frame.release())
+                                          .At(timestamp));
+                    return absl::OkStatus();
+                  });
+
+          // RaisePyErrorIfNotOk(
+          //     self->AddPacketToInputStream(stream, packet.At(packet_timestamp)),
+          //     /**acquire_gil=*/true);
+        },
+        "",
+        py::arg("stream"), py::arg("input_frame"),
+        py::arg("timestamp") = Timestamp::Unset());
+
 
   calculator_graph.def(
       "close_input_stream",

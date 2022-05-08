@@ -272,14 +272,14 @@ class BuildModules(build_ext.build_ext):
       self._download_external_file(external_file)
 
     binary_graphs = [
-        'face_detection/face_detection_short_range_cpu.binarypb',
-        'face_detection/face_detection_full_range_cpu.binarypb',
-        'face_landmark/face_landmark_front_cpu.binarypb',
-        'hand_landmark/hand_landmark_tracking_cpu.binarypb',
-        'holistic_landmark/holistic_landmark_cpu.binarypb',
-        'objectron/objectron_cpu.binarypb',
-        'pose_landmark/pose_landmark_cpu.binarypb',
-        'selfie_segmentation/selfie_segmentation_cpu.binarypb'
+        'face_detection/face_detection_short_range_gpu.binarypb',
+        'face_detection/face_detection_full_range_gpu.binarypb',
+        'face_landmark/face_landmark_front_gpu.binarypb',
+        'hand_landmark/hand_landmark_tracking_gpu.binarypb',
+        'holistic_landmark/holistic_landmark_gpu.binarypb',
+        'objectron/objectron_gpu.binarypb',
+        'pose_landmark/pose_landmark_gpu.binarypb',
+        'selfie_segmentation/selfie_segmentation_gpu.binarypb'
     ]
     for elem in binary_graphs:
       binary_graph = os.path.join('mediapipe/modules/', elem)
@@ -305,6 +305,9 @@ class BuildModules(build_ext.build_ext):
         'build',
         '--compilation_mode=opt',
         '--copt=-DNDEBUG',
+        # '--define=MEDIAPIPE_DISABLE_GPU=1',
+        '--copt=-DMESA_EGL_NO_X11_HEADERS',
+        '--copt=-DEGL_NO_X11',
         '--action_env=PYTHON_BIN_PATH=' + _normalize_path(sys.executable),
         binary_graph_target,
     ] + GPU_OPTIONS
@@ -420,6 +423,9 @@ class BuildExtension(build_ext.build_ext):
         'build',
         '--compilation_mode=opt',
         '--copt=-DNDEBUG',
+        # '--define=MEDIAPIPE_DISABLE_GPU=1',
+        '--copt=-DMESA_EGL_NO_X11_HEADERS',
+        '--copt=-DEGL_NO_X11',
         '--action_env=PYTHON_BIN_PATH=' + _normalize_path(sys.executable),
         str(ext.bazel_target + '.so'),
     ] + GPU_OPTIONS
